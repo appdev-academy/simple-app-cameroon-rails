@@ -48,7 +48,7 @@ gem "rswag", "~> 1.6.0"
 gem "sassc-rails"
 gem "scenic"
 gem "sentry-raven"
-gem "sidekiq"
+gem "sidekiq", "5.2.5"
 gem "sidekiq-throttled"
 gem "strong_password", "~> 0.0.8"
 gem "timecop", "~> 0.9.0", require: false
