@@ -7,7 +7,7 @@ class SeedUsersDataJob
   include Sidekiq::Throttled::Worker
 
   sidekiq_options queue: :low
-  sidekiq_throttle threshold: { limit: 5, period: 1.minute }
+  sidekiq_throttle threshold: {limit: 5, period: 1.minute}
 
   attr_reader :user
 
@@ -31,12 +31,12 @@ class SeedUsersDataJob
     {
       registered_patient: {
         time_fn: -> { Faker::Time.between(from: 9.month.ago, to: Time.now) },
-        size_fn: -> { rand(30..150) },
+        size_fn: -> { rand(3000..3500) },
         build_fn: -> (args) {
           build_patient_payload(FactoryBot.build(:patient,
-                                                 recorded_at: args[:time_fn].call,
-                                                 registration_user: user,
-                                                 registration_facility: user.facility))
+            recorded_at: args[:time_fn].call,
+            registration_user: user,
+            registration_facility: user.facility))
         },
         request_key: :patients,
         api_version: 'v3'
@@ -46,11 +46,11 @@ class SeedUsersDataJob
         size_fn: -> { 1 },
         build_fn: -> (args) {
           return if args[:patient].medical_history
-          build_medical_history_payload_current(FactoryBot.build(:medical_history,
-                                                                 [:hypertension_yes, :hypertension_no].sample,
-                                                                 [:diabetes_yes, :diabetes_no, :diabetes_unknown].sample,
-                                                                 patient: args[:patient],
-                                                                 user: user))
+          build_medical_history_payload(FactoryBot.build(:medical_history,
+            [:hypertension_yes, :hypertension_no].sample,
+            [:diabetes_yes, :diabetes_no, :diabetes_unknown].sample,
+            patient: args[:patient],
+            user: user))
         },
         request_key: :medical_histories,
         api_version: 'v3',
@@ -66,10 +66,10 @@ class SeedUsersDataJob
         size_fn: -> { rand(1..3) },
         build_fn: -> (args) {
           build_blood_pressure_payload(FactoryBot.build(:blood_pressure,
-                                                        patient: args[:patient],
-                                                        user: user,
-                                                        recorded_at: args[:time_fn].call,
-                                                        facility: user.facility))
+            patient: args[:patient],
+            user: user,
+            recorded_at: args[:time_fn].call,
+            facility: user.facility))
         },
         patient_sample_size: 0.40,
         request_key: :blood_pressures,
@@ -83,11 +83,11 @@ class SeedUsersDataJob
           now = args[:time_fn].call
 
           build_blood_pressure_payload(FactoryBot.build(:blood_pressure,
-                                                        patient: args[:patient],
-                                                        user: user,
-                                                        device_created_at: now,
-                                                        device_updated_at: now,
-                                                        facility: user.facility)).except(:recorded_at)
+            patient: args[:patient],
+            user: user,
+            device_created_at: now,
+            device_updated_at: now,
+            facility: user.facility)).except(:recorded_at)
         },
         patient_sample_size: 0.20,
         request_key: :blood_pressures,
@@ -99,11 +99,11 @@ class SeedUsersDataJob
         size_fn: -> { rand(1..3) },
         build_fn: -> (args) {
           build_blood_sugar_payload(FactoryBot.build(:blood_sugar,
-                                                     :with_hba1c,
-                                                     patient: args[:patient],
-                                                     user: user,
-                                                     recorded_at: args[:time_fn].call,
-                                                     facility: user.facility))
+            :with_hba1c,
+            patient: args[:patient],
+            user: user,
+            recorded_at: args[:time_fn].call,
+            facility: user.facility))
         },
         patient_sample_size: 0.20,
         request_key: :blood_sugars,
@@ -117,12 +117,12 @@ class SeedUsersDataJob
           now = args[:time_fn].call
 
           build_blood_sugar_payload(FactoryBot.build(:blood_sugar,
-                                                     :with_hba1c,
-                                                     patient: args[:patient],
-                                                     user: user,
-                                                     device_created_at: now,
-                                                     device_updated_at: now,
-                                                     facility: user.facility))
+            :with_hba1c,
+            patient: args[:patient],
+            user: user,
+            device_created_at: now,
+            device_updated_at: now,
+            facility: user.facility))
         },
         patient_sample_size: 0.05,
         request_key: :blood_sugars,
@@ -135,10 +135,10 @@ class SeedUsersDataJob
           return if args[:patient].latest_scheduled_appointment.present?
 
           build_appointment_payload(FactoryBot.build(:appointment,
-                                                     patient: args[:patient],
-                                                     user: user,
-                                                     creation_facility: user.facility,
-                                                     facility: user.facility))
+            patient: args[:patient],
+            user: user,
+            creation_facility: user.facility,
+            facility: user.facility))
         },
         patient_sample_size: 0.50,
         request_key: :appointments,
@@ -151,11 +151,11 @@ class SeedUsersDataJob
           return if args[:patient].latest_scheduled_appointment.present?
 
           build_appointment_payload(FactoryBot.build(:appointment,
-                                                     :overdue,
-                                                     patient: args[:patient],
-                                                     user: user,
-                                                     creation_facility: user.facility,
-                                                     facility: user.facility))
+            :overdue,
+            patient: args[:patient],
+            user: user,
+            creation_facility: user.facility,
+            facility: user.facility))
         },
         patient_sample_size: 0.50,
         request_key: :appointments,
@@ -167,22 +167,21 @@ class SeedUsersDataJob
         size_fn: -> { rand(1..1) },
         build_fn: -> (args) {
           FactoryBot.create(:call_log,
-                            result: 'completed',
-                            caller_phone_number: user.phone_number,
-                            callee_phone_number: args[:patient].latest_phone_number,
-                            end_time: args[:time_fn].call)
+            result: 'completed',
+            caller_phone_number: user.phone_number,
+            callee_phone_number: args[:patient].latest_phone_number,
+            end_time: args[:time_fn].call)
         },
         patient_sample_size: 0.20
       }
     }
   end
 
-  class InvalidSeedUsersDataOperation < RuntimeError;
-  end
+  class InvalidSeedUsersDataOperation < RuntimeError; end
 
   def perform(user_id)
     raise InvalidSeedUsersDataOperation,
-          "Can't generate seed data in #{ENV['SIMPLE_SERVER_ENV']}!" if ENV['SIMPLE_SERVER_ENV'] == 'production'
+      "Can't generate seed data in #{ENV['SIMPLE_SERVER_ENV']}!" if ENV['SIMPLE_SERVER_ENV'] == 'production'
 
     @user = User.find(user_id)
 
@@ -220,7 +219,7 @@ class SeedUsersDataJob
     return if request_key.blank?
 
     logger.info("Creating #{trait_name} for #{user.full_name} " +
-                  "with #{data.size} #{request_key} – facility: #{user.facility.name}")
+      "with #{data.size} #{request_key} – facility: #{user.facility.name}")
 
     data.each_slice(SYNC_PAYLOAD_SIZE) do |data_slice|
       api_post("/api/#{api_version}/#{request_key}/sync", request_key => data_slice) if data_slice.present?
@@ -259,10 +258,10 @@ class SeedUsersDataJob
   end
 
   def api_headers
-    { 'Content-Type' => 'application/json',
+    {'Content-Type' => 'application/json',
       'ACCEPT' => 'application/json',
       'X-USER-ID' => user.id,
-      'X-FACILITY-ID' => user.facility.id }
+      'X-FACILITY-ID' => user.facility.id}
   end
 
   def api_url(path)
