@@ -31,7 +31,7 @@ class SeedUsersDataJob
     {
       registered_patient: {
         time_fn: -> { Faker::Time.between(from: 9.month.ago, to: Time.now) },
-        size_fn: -> { rand(3000..3500) },
+        size_fn: -> { rand(3000..5500) },
         build_fn: -> (args) {
           build_patient_payload(FactoryBot.build(:patient,
             recorded_at: args[:time_fn].call,
