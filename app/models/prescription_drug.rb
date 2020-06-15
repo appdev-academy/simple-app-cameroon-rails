@@ -23,4 +23,13 @@ class PrescriptionDrug < ApplicationRecord
       dosage: dosage,
     }
   end
+
+  def active_on?(date)
+    end_of_day = date.end_of_day
+    created_on_or_before = created_at <= end_of_day
+    destroyed_after = is_deleted = true && updated_at > end_of_day
+    undestroyed = is_deleted == false
+
+    created_on_or_before && (destroyed_after || undestroyed)
+  end
 end
