@@ -25,13 +25,6 @@ class Encounter < ApplicationRecord
   end
 
   def prescription_drugs
-    end_of_day = encountered_on.end_of_day + timezone_offset.hours
-
-    patient_prescription_drugs = PrescriptionDrug.where(
-      is_protocol_drug: true,
-      patient: patient
-    )
-
-    patient_prescription_drugs.select { |drug| drug.active_on?(encountered_on) }
+    patient.prescription_drugs.where(is_protocol_drug: true).select { |drug| drug.active_on?(encountered_on) }
   end
 end
