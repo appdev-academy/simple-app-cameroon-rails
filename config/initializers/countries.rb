@@ -49,6 +49,16 @@ class CountryConfig
       sms_country_code: ENV["SMS_COUNTRY_CODE"] || "+44",
       supported_genders: %w[male female transgender],
       patient_line_list_show_zone: false
+    },
+    CM: {
+      abbreviation: "CM",
+      name: "Republic of Cameroon",
+      dashboard_locale: "en",
+      faker_locale: "en-IND",
+      time_zone: "Africa/Algiers",
+      sms_country_code: ENV["SMS_COUNTRY_CODE"] || "+237",
+      supported_genders: %w[male female transgender],
+      patient_line_list_show_zone: false
     }
   }.with_indifferent_access.freeze
 
