@@ -30,3 +30,8 @@ coverage
 
 # Ignore leftover pulls from cap db:pull
 /*.sql
+
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
