@@ -38,6 +38,7 @@ gem "kaminari"
 gem "lodash-rails"
 gem "newrelic_rpm"
 gem "passenger"
+gem "puma"
 gem "pg", ">= 0.18", "< 2.0"
 gem "pg_search"
 gem "phonelib"
@@ -98,7 +99,6 @@ group :test do
   gem "fakeredis", require: false
   gem "generator_spec"
   gem "launchy"
-  gem "puma"
   gem "rspec-sidekiq"
   gem "simplecov", require: false
   gem "webdrivers"
