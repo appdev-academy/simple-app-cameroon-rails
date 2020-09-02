@@ -79,12 +79,10 @@ Rails.application.configure do
   config.action_mailer.default_url_options = {host: ENV.fetch("SIMPLE_SERVER_HOST")}
   config.action_mailer.asset_host = "#{ENV.fetch("SIMPLE_SERVER_HOST_PROTOCOL")}://#{ENV.fetch("SIMPLE_SERVER_HOST")}"
 
-  # Use SendGrid as our SMTP provider
-  config.action_mailer.smtp_settings = {
-    user_name: ENV.fetch("SENDGRID_USERNAME"),
-    password: ENV.fetch("SENDGRID_PASSWORD"),
-    domain: "simple.org",
-    address: "smtp.sendgrid.net",
+  ActionMailer::Base.smtp_settings = {
+    user_name: ENV['SMTP_USERNAME'],
+    password: ENV['SMTP_PASSWORD'],
+    address: 'email-smtp.eu-central-1.amazonaws.com',
     port: 587,
     authentication: :plain,
     enable_starttls_auto: true
