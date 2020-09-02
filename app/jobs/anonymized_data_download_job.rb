@@ -1,7 +1,7 @@
 class AnonymizedDataDownloadJob < ApplicationJob
   queue_as :default
   self.queue_adapter = :sidekiq
-
+  
   def perform(recipient_name, recipient_email, model_params_map, model_type)
     case model_type
     when "district"

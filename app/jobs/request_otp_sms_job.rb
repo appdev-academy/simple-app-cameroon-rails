@@ -4,7 +4,7 @@ class RequestOtpSmsJob < ApplicationJob
   
   def perform(user)
     otp_message = otp_message(user)
-    AdminNotificationsMailer.send_otp({ phone: user.phone_number, otp: otp_message })
+    AdminNotificationsMailer.send_otp({ phone: user.phone_number, otp: otp_message }).deliver_later
     NotificationService.new.send_sms(user.phone_number, otp_message)
   end
   
