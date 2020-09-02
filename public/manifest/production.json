@@ -2,13 +2,13 @@
   "v1": [
     {
       "country_code": "CM",
-      "endpoint": "https://api.simple.org/api/",
+      "endpoint": "https://www.simpleappcameroon.com/api/",
       "display_name": "Republic of Cameroon",
       "isd_code": "237"
     },
     {
       "country_code": "US",
-      "endpoint": "https://api.simple.org/api/",
+      "endpoint": "https://www.simpleappcameroon.com/api/",
       "display_name": "United States",
       "isd_code": "1"
     }
