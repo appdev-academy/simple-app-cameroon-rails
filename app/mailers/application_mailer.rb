@@ -1,6 +1,6 @@
 class ApplicationMailer < ActionMailer::Base
-  default from: "help@simple.org"
-  layout "mailer"
-
+  default from: 'do-not-reply@simpleappcameroon.com'
+  layout 'mailer'
+  
   helper SimpleServerEnvHelper
 end
