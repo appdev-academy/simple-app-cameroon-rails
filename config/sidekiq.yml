@@ -1,9 +1,9 @@
-:concurrency: 15
-:pidfile: ./tmp/pids/sidekiq.pid
-:logfile: ./log/sidekiq.log
+:concurrency: 5
 
 :queues:
   - default
+  - mailers
+  - emails
   - [analytics_warmup, 2]
   - [high, 3]
   - [low, 1]

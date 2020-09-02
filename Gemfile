@@ -57,7 +57,7 @@ gem "rswag", "~> 1.6.0"
 gem "sassc-rails"
 gem "scenic"
 gem "sentry-raven"
-gem "sidekiq", '< 6'
+gem "sidekiq", '5.2.9'
 gem "sidekiq-throttled"
 gem "slack-notifier"
 gem "strong_password", "~> 0.0.8"
