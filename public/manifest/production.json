@@ -1,16 +1,16 @@
 {
   "v1": [
     {
-      "country_code": "IN",
+      "country_code": "CM",
       "endpoint": "https://api.simple.org/api/",
-      "display_name": "India",
-      "isd_code": "91"
+      "display_name": "Republic of Cameroon",
+      "isd_code": "237"
     },
     {
-      "country_code": "BD",
-      "endpoint": "https://api.bd.simple.org/api/",
-      "display_name": "Bangladesh",
-      "isd_code": "880"
+      "country_code": "US",
+      "endpoint": "https://api.simple.org/api/",
+      "display_name": "United States",
+      "isd_code": "1"
     }
   ]
 }

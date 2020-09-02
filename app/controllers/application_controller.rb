@@ -2,6 +2,7 @@ class ApplicationController < ActionController::Base
   include Pundit
   protect_from_forgery with: :exception
 
+  before_action :redirect_from_apex_to_www
   before_action :configure_permitted_parameters, if: :devise_controller?
   around_action :switch_locale
 
@@ -26,5 +27,11 @@ class ApplicationController < ActionController::Base
   # See https://github.com/plataformatec/devise/tree/v3.5.2#strong-parameters
   def configure_permitted_parameters
     devise_parameter_sanitizer.permit(:invite, keys: [:email, :role])
+  end
+  
+  def redirect_from_apex_to_www
+    if request.host == 'simpleappcameroon.com'
+      redirect_to 'https://www.simpleappcameroon.com' + request.fullpath, status: 301
+    end
   end
 end

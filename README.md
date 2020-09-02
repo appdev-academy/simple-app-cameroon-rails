@@ -17,7 +17,7 @@ This is the backend for the Simple app to help track hypertensive patients acros
 
 Make sure you have the following dependencies installed:
 
-- Ruby 2.5.1
+- Ruby 2.5.8
 - PostgreSQL 10
 - Redis
 - Yarn
@@ -29,7 +29,7 @@ brew cask install postgres
 brew install rbenv ruby-build redis yarn
 ```
 
-To set up Ruby 2.5.1, see https://gorails.com/setup/osx/10.15-catalina
+To set up Ruby 2.5.8, see https://gorails.com/setup/osx/10.15-catalina
 
 Open Postgres.app and ensure you have a PostgreSQL 10 server initialized.
 
