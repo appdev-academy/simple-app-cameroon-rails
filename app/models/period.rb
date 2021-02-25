@@ -11,7 +11,12 @@ class Period
   end
 
   def self.quarter(value)
-    quarter = case value
+    quarter = cast_to_quarter(value)
+    new(type: :quarter, value: quarter)
+  end
+
+  def self.cast_to_quarter(value)
+    case value
     when String
       Quarter.parse(value)
     when Date, Time, DateTime
@@ -21,15 +26,20 @@ class Period
     else
       raise ArgumentError, "unknown quarter value #{value} #{value.class}"
     end
-    new(type: :quarter, value: quarter)
   end
 
   def initialize(attributes = {})
     super
     self.type = type.intern if type
-    if value.is_a?(String)
-      self.value = parse_string_value(value)
+    self.value = if quarter?
+      self.class.cast_to_quarter(value)
+    else
+      value.to_date.beginning_of_month
     end
+  end
+
+  def attributes
+    {type: type, value: value}
   end
 
   # Convert this Period to a quarter period - so:
@@ -45,6 +55,16 @@ class Period
   def blood_pressure_control_range
     three_months_ago = end_date.advance(months: -3)
     (three_months_ago..end_date)
+  end
+
+  alias_method :bp_control_range, :blood_pressure_control_range
+
+  def bp_control_range_start_date
+    bp_control_range.begin.next_day.to_s(:day_mon_year)
+  end
+
+  def bp_control_range_end_date
+    bp_control_range.end.to_s(:day_mon_year)
   end
 
   def quarter?
@@ -79,11 +99,19 @@ class Period
     end
   end
 
+  alias_method :next, :succ
+
   def previous
     if quarter?
       Period.new(type: type, value: value.previous_quarter)
     else
       Period.new(type: type, value: value.last_month)
+    end
+  end
+
+  def downto(number)
+    (1..number).inject([self]) do |periods, number|
+      periods << periods.last.previous
     end
   end
 
@@ -94,7 +122,9 @@ class Period
     Period.new(type: type, value: value.advance(options))
   end
 
-  alias eql? ==
+  def cache_key
+    "#{type}/#{self}"
+  end
 
   def hash
     value.hash ^ type.hash
@@ -102,9 +132,11 @@ class Period
 
   def <=>(other)
     raise ArgumentError, "you are trying to compare a #{other.class} with a Period" unless other.respond_to?(:type)
-    raise ArgumentError, "can only compare Periods of the same type" if type != other.type
+    return nil if type != other.type
     value <=> other.value
   end
+
+  alias_method :eql?, :==
 
   def inspect
     "<Period type:#{type} value=#{value}>"
@@ -118,13 +150,7 @@ class Period
     end
   end
 
-  private
-
-  def parse_string_value(val)
-    if quarter?
-      Quarter.parse(val)
-    else
-      val.to_date
-    end
+  def adjective
+    "#{type.capitalize}ly"
   end
 end

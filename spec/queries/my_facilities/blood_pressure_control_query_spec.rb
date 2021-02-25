@@ -1,11 +1,12 @@
 require "rails_helper"
 
-RSpec.describe MyFacilities::BloodPressureControlQuery do
+RSpec.describe BloodPressureControlQuery do
   include QuarterHelper
 
   describe "BP control queries" do
     context "Quarterly cohorts" do
       let!(:facility) { create(:facility) }
+      let!(:assigned_facility) { create(:facility) }
       let!(:user) { create(:user) }
 
       let!(:current_quarter) { quarter(Time.current) }
@@ -26,31 +27,49 @@ RSpec.describe MyFacilities::BloodPressureControlQuery do
 
       let!(:patients_with_controlled_bp) do
         (1..2).map do
-          create(:patient, recorded_at: cohort_range.sample, registration_facility: facility, registration_user: user)
+          create(:patient,
+            recorded_at: cohort_range.sample,
+            registration_facility: facility,
+            assigned_facility: assigned_facility,
+            registration_user: user)
         end
       end
 
       let!(:patients_with_uncontrolled_bp) do
         [create(:patient,
           recorded_at: cohort_range.sample,
-          registration_facility: facility, registration_user: user),
+          registration_facility: facility,
+          assigned_facility: assigned_facility,
+          registration_user: user),
           create(:patient,
             recorded_at: registration_quarter_start,
             registration_facility: facility,
+            assigned_facility: assigned_facility,
             registration_user: user),
           create(:patient,
             recorded_at: registration_quarter_start.end_of_quarter,
-            registration_facility: facility, registration_user: user)]
+            registration_facility: facility,
+            assigned_facility: assigned_facility,
+            registration_user: user)]
       end
 
       let!(:patients_with_missed_visit) do
         (1..2).map do
-          create(:patient, recorded_at: cohort_range.sample, registration_facility: facility, registration_user: user)
+          create(:patient,
+            recorded_at: cohort_range.sample,
+            registration_facility: facility,
+            assigned_facility: assigned_facility,
+            registration_user: user)
         end
       end
 
       let!(:non_htn_patient) do
-        create(:patient, :without_hypertension, recorded_at: cohort_range.sample, registration_facility: facility, registration_user: user)
+        create(:patient,
+          :without_hypertension,
+          recorded_at: cohort_range.sample,
+          registration_facility: facility,
+          assigned_facility: assigned_facility,
+          registration_user: user)
       end
 
       let!(:controlled_blood_pressures) do
@@ -91,7 +110,7 @@ RSpec.describe MyFacilities::BloodPressureControlQuery do
       end
 
       let!(:query) do
-        described_class.new(facilities: Facility.all,
+        described_class.new(facilities: assigned_facility,
                             cohort_period: {cohort_period: :quarter,
                                             registration_quarter: registration_quarter,
                                             registration_year: registration_quarter_year})
@@ -105,11 +124,25 @@ RSpec.describe MyFacilities::BloodPressureControlQuery do
       end
 
       context "considers only htn diagnosed patients" do
-        describe "#cohort_registrations" do
+        describe "#cohort_patients" do
           specify do
-            expect(query.cohort_registrations).to match_array(patients_with_controlled_bp +
+            expect(query.cohort_patients).to match_array(patients_with_controlled_bp +
                                                                 patients_with_uncontrolled_bp +
                                                                 patients_with_missed_visit)
+          end
+
+          context "when with_exclusions is true" do
+            it "excludes dead patients" do
+              patients_with_controlled_bp.first.update(status: :dead)
+
+              query = described_class.new(facilities: assigned_facility,
+                                          cohort_period: {cohort_period: :quarter,
+                                                          registration_quarter: registration_quarter,
+                                                          registration_year: registration_quarter_year},
+                                          with_exclusions: true)
+
+              expect(query.cohort_patients).not_to include(patients_with_controlled_bp.first)
+            end
           end
         end
 
@@ -117,17 +150,68 @@ RSpec.describe MyFacilities::BloodPressureControlQuery do
           specify do
             expect(query.cohort_controlled_bps.pluck(:bp_id)).to match_array(controlled_blood_pressures.pluck(:id))
           end
+
+          context "when with_exclusions is true" do
+            it "excludes dead patients" do
+              controlled_blood_pressures.first.patient.update(status: :dead)
+
+              query = described_class.new(facilities: assigned_facility,
+                                          cohort_period: {cohort_period: :quarter,
+                                                          registration_quarter: registration_quarter,
+                                                          registration_year: registration_quarter_year},
+                                          with_exclusions: true)
+
+              expect(query.cohort_controlled_bps.pluck(:bp_id)).not_to include(controlled_blood_pressures.first.id)
+            end
+          end
         end
 
         describe "#cohort_uncontrolled_bps" do
           specify do
             expect(query.cohort_uncontrolled_bps.pluck(:bp_id)).to match_array(uncontrolled_blood_pressures.pluck(:id))
           end
+
+          context "when with_exclusions is true" do
+            it "excludes dead patients" do
+              uncontrolled_blood_pressures.first.patient.update(status: :dead)
+              uncontrolled_blood_pressures.second.patient.update(status: :migrated)
+
+              query = described_class.new(facilities: assigned_facility,
+                                          cohort_period: {cohort_period: :quarter,
+                                                          registration_quarter: registration_quarter,
+                                                          registration_year: registration_quarter_year},
+                                          with_exclusions: true)
+
+              expect(query.cohort_uncontrolled_bps.pluck(:bp_id)).not_to include(uncontrolled_blood_pressures.first.id)
+            end
+          end
         end
 
         describe "#cohort_missed_visits_count" do
           specify do
             expect(query.cohort_missed_visits_count).to eq(2)
+          end
+        end
+
+        context "per facility counts" do
+          describe "#cohort_patients_per_facility" do
+            specify do
+              expect(query.cohort_patients_per_facility[assigned_facility.id]).to eq (patients_with_controlled_bp +
+                  patients_with_uncontrolled_bp +
+                  patients_with_missed_visit).length
+            end
+          end
+
+          describe "#cohort_controlled_bps_per_facility" do
+            specify do
+              expect(query.cohort_controlled_bps_per_facility[assigned_facility.id]).to eq(controlled_blood_pressures.count)
+            end
+          end
+
+          describe "#cohort_uncontrolled_bps_per_facility" do
+            specify do
+              expect(query.cohort_uncontrolled_bps_per_facility[assigned_facility.id]).to eq(uncontrolled_blood_pressures.count)
+            end
           end
         end
       end
@@ -242,9 +326,9 @@ RSpec.describe MyFacilities::BloodPressureControlQuery do
       end
 
       context "considers only htn diagnosed patients" do
-        describe "#cohort_registrations" do
+        describe "#cohort_patients" do
           specify do
-            expect(query.cohort_registrations).to match_array(patients_with_controlled_bp +
+            expect(query.cohort_patients).to match_array(patients_with_controlled_bp +
                                                                 patients_with_uncontrolled_bp +
                                                                 patients_with_missed_visit)
           end
@@ -272,34 +356,64 @@ RSpec.describe MyFacilities::BloodPressureControlQuery do
 
     context "Overall queries" do
       let!(:facility) { create(:facility) }
+      let!(:assigned_facility) { create(:facility) }
       let!(:user) { create(:user) }
 
       let!(:recent_patient) do
-        create(:patient, registration_facility: facility, registration_user: user, recorded_at: 85.days.ago)
+        create(:patient,
+          registration_facility: facility,
+          assigned_facility: assigned_facility,
+          registration_user: user,
+          recorded_at: 85.days.ago)
       end
 
       let!(:patient_with_recent_bp) do
-        create(:patient, registration_facility: facility, registration_user: user, recorded_at: 4.months.ago)
+        create(:patient,
+          registration_facility: facility,
+          assigned_facility: assigned_facility,
+          registration_user: user,
+          recorded_at: 4.months.ago)
       end
 
       let!(:patient_without_recent_bp) do
-        create(:patient, registration_facility: facility, registration_user: user, recorded_at: 4.months.ago)
+        create(:patient,
+          registration_facility: facility,
+          assigned_facility: assigned_facility,
+          registration_user: user,
+          recorded_at: 4.months.ago)
       end
 
       let!(:patients_with_uncontrolled_bp) do
-        create(:patient, registration_facility: facility, registration_user: user, recorded_at: 4.months.ago)
+        create(:patient,
+          registration_facility: facility,
+          assigned_facility: assigned_facility,
+          registration_user: user,
+          recorded_at: 4.months.ago)
       end
 
       let!(:patients_with_missed_visit) do
-        create(:patient, registration_facility: facility, registration_user: user, recorded_at: 4.months.ago)
+        create(:patient,
+          registration_facility: facility,
+          assigned_facility: assigned_facility,
+          registration_user: user,
+          recorded_at: 4.months.ago)
       end
 
       let!(:non_htn_patient_with_recent_bp) do
-        create(:patient, :without_hypertension, registration_facility: facility, registration_user: user, recorded_at: 4.months.ago)
+        create(:patient,
+          :without_hypertension,
+          registration_facility: facility,
+          assigned_facility: assigned_facility,
+          registration_user: user,
+          recorded_at: 4.months.ago)
       end
 
       let!(:old_patient) do
-        create(:patient, registration_facility: facility, registration_user: user, recorded_at: 6.months.ago)
+        create(:patient,
+          registration_facility: facility,
+          assigned_facility: assigned_facility,
+          registration_user: user,
+          recorded_at: 6.months.ago)
       end
 
       let!(:bp_for_recent_patient) do
@@ -365,6 +479,12 @@ RSpec.describe MyFacilities::BloodPressureControlQuery do
           user: user)
       end
 
+      let!(:ltfu_patient) do
+        create(:patient,
+          assigned_facility: assigned_facility,
+          recorded_at: 2.years.ago)
+      end
+
       before do
         ActiveRecord::Base.transaction do
           LatestBloodPressuresPerPatientPerMonth.refresh
@@ -374,18 +494,51 @@ RSpec.describe MyFacilities::BloodPressureControlQuery do
 
       context "considers only htn diagnosed patients" do
         describe "#overall_patients" do
-          specify {
+          specify do
             expect(described_class.new.overall_patients).to contain_exactly(patient_with_recent_bp,
               patient_without_recent_bp,
               patients_with_uncontrolled_bp,
               patients_with_missed_visit,
-              old_patient)
-          }
+              old_patient,
+              ltfu_patient)
+          end
+
+          context "when with_exclusions is true" do
+            it "excludes dead patients" do
+              patient_with_recent_bp.update(status: :dead)
+
+              expect(described_class.new(with_exclusions: true).overall_patients).not_to include(patient_with_recent_bp)
+            end
+
+            it "excludes LTFU patients" do
+              expect(described_class.new(with_exclusions: false).overall_patients).to include(ltfu_patient)
+              expect(described_class.new(with_exclusions: true).overall_patients).not_to include(ltfu_patient)
+            end
+          end
         end
 
         describe "#overall_controlled_bps" do
           specify do
             expect(described_class.new.overall_controlled_bps.pluck(:bp_id)).to contain_exactly(bp_for_patient_with_recent_bp.id)
+          end
+        end
+
+        context "per facility counts" do
+          describe "#overall_patients_per_facility" do
+            specify do
+              expect(described_class.new.overall_patients_per_facility[assigned_facility.id]).to eq([patient_with_recent_bp,
+                patient_without_recent_bp,
+                patients_with_uncontrolled_bp,
+                patients_with_missed_visit,
+                old_patient,
+                ltfu_patient].length)
+            end
+          end
+
+          describe "#overall_controlled_bps_per_facility" do
+            specify do
+              expect(described_class.new.overall_controlled_bps_per_facility[assigned_facility.id]).to eq 1
+            end
           end
         end
       end

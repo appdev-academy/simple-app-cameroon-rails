@@ -8,6 +8,17 @@ RSpec.describe PrescriptionDrug, type: :model do
   describe "Associations" do
     it { should belong_to(:facility).optional }
     it { should belong_to(:patient).optional }
+    it { should belong_to(:teleconsultation).optional }
+  end
+
+  describe "Scopes" do
+    describe ".for_sync" do
+      it "includes discarded prescription drugs" do
+        discarded_prescription_drug = create(:prescription_drug, deleted_at: Time.now)
+
+        expect(described_class.for_sync).to include(discarded_prescription_drug)
+      end
+    end
   end
 
   describe "Behavior" do

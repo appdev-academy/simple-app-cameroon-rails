@@ -122,6 +122,14 @@ Rails.application.routes.draw do
       scope :facility_teleconsultations do
         get "/:facility_id", to: "facility_teleconsultations#show"
       end
+
+      scope :facility_medical_officers do
+        get "sync", to: "facility_medical_officers#sync_to_user"
+      end
+
+      scope :teleconsultations do
+        post "sync", to: "teleconsultations#sync_from_user"
+      end
     end
   end
 
@@ -129,52 +137,44 @@ Rails.application.routes.draw do
     path: "email_authentications",
     controllers: {invitations: "email_authentications/invitations"}
 
-  resources :admins
-
-  namespace :analytics do
-    resources :facilities, only: [:show] do
-      get "graphics", to: "facilities#whatsapp_graphics"
-      get "patient_list", to: "facilities#patient_list"
-      get "patient_list_with_history", to: "facilities#patient_list_with_history"
-      get "share", to: "facilities#share_anonymized_data"
-    end
-
-    resources :organizations do
-      resources :districts, only: [:show] do
-        get "graphics", to: "districts#whatsapp_graphics"
-        get "patient_list", to: "districts#patient_list"
-        get "patient_list_with_history", to: "districts#patient_list_with_history"
-        get "share", to: "districts#share_anonymized_data"
-      end
+  resources :admins do
+    member do
+      get "access_tree/:page", to: "admins#access_tree", as: :access_tree
+      post "resend_invitation", to: "admins#resend_invitation", as: :resend_invitation
     end
   end
 
   resources :appointments, only: [:index, :update]
-  resources :patients do
-    collection do
-      get :lookup
-    end
-  end
 
-  resources :organizations, only: [:index], path: "dashboard"
-
+  get "/dashboard", to: redirect("/reports/regions/")
   get "/dashboard/districts/", to: redirect("/reports/districts/")
   get "/dashboard/districts/:slug", to: redirect("/reports/districts/%{slug}")
   get "/reports/districts/", to: redirect("/reports/regions/")
 
   namespace :reports do
+    resources :patient_lists, only: [:show]
     resources :regions, only: [:index]
     get "regions/:report_scope/:id", to: "regions#show", as: :region
     get "regions/:report_scope/:id/details", to: "regions#details", as: :region_details
     get "regions/:report_scope/:id/cohort", to: "regions#cohort", as: :region_cohort
+    get "regions/:report_scope/:id/download", to: "regions#download", as: :region_download
+    get "regions/:report_scope/:id/graphics", to: "regions#whatsapp_graphics", as: :graphics
   end
+
+  resource :regions_search, controller: "regions_search"
 
   namespace :my_facilities do
     root to: "/my_facilities#index", as: "overview"
-    get "ranked_facilities", to: "ranked_facilities"
-    get "blood_pressure_control", to: "blood_pressure_control"
-    get "registrations", to: "registrations"
+    get "blood_pressure_control", to: redirect("/my_facilities/bp_controlled")
+    get "bp_controlled", to: "bp_controlled"
+    get "bp_not_controlled", to: "bp_not_controlled"
+    get "registrations", to: redirect("/my_facilities/")
     get "missed_visits", to: "missed_visits"
+    get "facility_performance", to: "facility_performance#show"
+    get "ranked_facilities", to: redirect("/my_facilities/facility_performance")
+    get "drug_stocks", to: "drug_stocks#index"
+    post "drug_stocks", to: "drug_stocks#create"
+    get "drug_stocks/:facility_id/new", to: "drug_stocks#new", as: :drug_stock_form
   end
 
   scope :resources do
@@ -199,10 +199,17 @@ Rails.application.routes.draw do
     end
 
     resources :users do
+      get "teleconsult_search", on: :collection, to: "users#teleconsult_search"
       put "reset_otp", to: "users#reset_otp"
       put "disable_access", to: "users#disable_access"
       put "enable_access", to: "users#enable_access"
     end
+
+    # This is a temporary page to assist in clean up
+    get "fix_zone_data", to: "fix_zone_data#show"
+    post "update_zone", to: "fix_zone_data#update"
+
+    resources :error_traces, only: [:index, :create]
   end
 
   if FeatureToggle.enabled?("PURGE_ENDPOINT_FOR_QA")
@@ -211,12 +218,12 @@ Rails.application.routes.draw do
     end
   end
 
-  authenticate :email_authentication, ->(a) { a.user.has_permission?(:view_sidekiq_ui) } do
+  authenticate :email_authentication, ->(a) { a.user.power_user? } do
     require "sidekiq/web"
     mount Sidekiq::Web => "/sidekiq"
   end
 
-  authenticate :email_authentication, ->(a) { a.user.has_permission?(:view_flipper_ui) } do
+  authenticate :email_authentication, ->(a) { a.user.power_user? } do
     mount Flipper::UI.app(Flipper) => "/flipper"
   end
 end

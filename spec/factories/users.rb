@@ -7,7 +7,6 @@ FactoryBot.define do
     end
 
     full_name { Faker::Name.name }
-    organization
     device_created_at { Time.current }
     device_updated_at { Time.current }
     teleconsultation_phone_number { Faker::PhoneNumber.phone_number }
@@ -26,7 +25,7 @@ FactoryBot.define do
         UserAuthentication.new(authenticatable: phone_number_authentication)
       ]
 
-      user.save
+      user.save!
     end
 
     trait :with_phone_number_authentication
@@ -69,10 +68,8 @@ FactoryBot.define do
     device_updated_at { Time.current }
     sync_approval_status { User.sync_approval_statuses[:denied] }
     email_authentications { build_list(:email_authentication, 1, email: email, password: password) }
-    user_permissions { [] }
-    organization
-
-    role { :owner }
+    role { "power user" }
+    receive_approval_notifications { true }
     access_level { :power_user }
 
     trait :call_center do
@@ -95,55 +92,12 @@ FactoryBot.define do
       access_level { :power_user }
     end
 
-    trait(:owner) do
-      role { :owner }
-
-      after :create do |user, _options|
-        access_level = Permissions::ACCESS_LEVELS.find { |access_level| access_level[:name] == user.role.to_sym }
-        access_level[:default_permissions].each do |slug|
-          user.user_permissions.create(permission_slug: slug)
-        end
+    trait :with_access do
+      transient do
+        resource { nil }
       end
-    end
 
-    trait(:supervisor) do
-      role { :supervisor }
-      after :create do |user, options|
-        access_level = Permissions::ACCESS_LEVELS.find { |access_level| access_level[:name] == user.role.to_sym }
-        access_level[:default_permissions].each do |slug|
-          user.user_permissions.create(permission_slug: slug, resource: options.facility_group)
-        end
-      end
-    end
-
-    trait(:analyst) do
-      role { :analyst }
-      after :create do |user, options|
-        access_level = Permissions::ACCESS_LEVELS.find { |access_level| access_level[:name] == user.role.to_sym }
-        access_level[:default_permissions].each do |slug|
-          user.user_permissions.create(permission_slug: slug, resource: options.facility_group)
-        end
-      end
-    end
-
-    trait(:counsellor) do
-      role { :counsellor }
-      after :create do |user, options|
-        access_level = Permissions::ACCESS_LEVELS.find { |access_level| access_level[:name] == user.role.to_sym }
-        access_level[:default_permissions].each do |slug|
-          user.user_permissions.create(permission_slug: slug, resource: options.facility_group)
-        end
-      end
-    end
-
-    trait(:organization_owner) do
-      role { :organization_owner }
-      after :create do |user, options|
-        access_level = Permissions::ACCESS_LEVELS.find { |access_level| access_level[:name] == user.role.to_sym }
-        access_level[:default_permissions].each do |slug|
-          user.user_permissions.create(permission_slug: slug, resource: options.organization)
-        end
-      end
+      accesses { [build(:access, user_id: id, resource: resource)] }
     end
   end
 end

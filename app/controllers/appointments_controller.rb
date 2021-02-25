@@ -7,20 +7,21 @@ class AppointmentsController < AdminController
   DEFAULT_SEARCH_FILTERS = ["only_less_than_year_overdue"]
 
   def index
-    authorize [:overdue_list, Appointment], :index?
+    authorize { current_admin.accessible_facilities(:manage_overdue_list).any? }
 
     @search_filters = index_params[:search_filters] || []
-    # We have to check to see this is the first page load where we want to apply default search filters. This
-    # is the case where the form is _not_ submitted and there are no search filters passed in.
-    if @search_filters.blank? && !index_params[:submitted]
+    # only apply default search filters on navigating to this page
+    # after initial page load, params will at least include a facility
+    if index_params.keys.empty?
       @search_filters = DEFAULT_SEARCH_FILTERS
     end
 
-    scope = policy_scope([:overdue_list, PatientSummary])
+    scope = PatientSummary.where(next_appointment_facility_id: current_admin.accessible_facilities(:manage_overdue_list))
+
     @patient_summaries = PatientSummaryQuery.call(relation: scope, filters: @search_filters)
 
     if current_facility
-      @patient_summaries = @patient_summaries.where(next_appointment_facility_id: current_facility.id)
+      @patient_summaries = @patient_summaries.where(assigned_facility_id: current_facility.id)
     end
     @patient_summaries = @patient_summaries.order(risk_level: :desc, next_appointment_scheduled_date: :desc, id: :asc)
 
@@ -37,10 +38,12 @@ class AppointmentsController < AdminController
 
   def update
     call_result = appointment_params[:call_result].to_sym
+    search_filters = appointment_params[:search_filters]&.split || []
 
     if set_appointment_status_from_call_result(@appointment, call_result)
-      redirect_to appointments_url(params: {facility_id: selected_facility_id, page: page}),
-        notice: "Saved. #{@appointment.patient.full_name} marked as \"#{call_result.to_s.humanize}\""
+      appt_params = {facility_id: selected_facility_id, page: page, search_filters: search_filters}
+      notice = %(Saved. #{@appointment.patient.full_name} marked as "#{call_result.to_s.humanize}")
+      redirect_to appointments_url(params: appt_params), notice: notice
     else
       redirect_back fallback_location: root_path, alert: "Something went wrong!"
     end
@@ -49,16 +52,16 @@ class AppointmentsController < AdminController
   private
 
   def index_params
-    @index_params ||= params.permit(:facility_id, :per_page, :submitted, search_filters: [])
+    @index_params ||= params.permit(:facility_id, :per_page, search_filters: [])
   end
 
   def set_appointment
     @appointment = Appointment.find(params[:id] || params[:appointment_id])
-    authorize([:overdue_list, @appointment])
+    authorize { current_admin.accessible_facilities(:manage_overdue_list).include?(@appointment.facility) }
   end
 
   def appointment_params
-    params.require(:appointment).permit(:call_result)
+    params.require(:appointment).permit(:call_result, :search_filters)
   end
 
   def set_appointment_status_from_call_result(appointment, call_result)
@@ -72,11 +75,8 @@ class AppointmentsController < AdminController
       appointment.mark_appointment_cancelled(call_result)
     end
 
-    if call_result == :dead
-      appointment.mark_patient_as_dead
-    end
-
     appointment.save
+    appointment.update_patient_status
   end
 
   def selected_facility_id
