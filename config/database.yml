@@ -9,11 +9,11 @@ default: &default
 
 development:
   <<: *default
-  database: simple-server_development
+  database: simple_server_development
 
 test:
   <<: *default
-  database: simple-server_test<%= ENV['TEST_ENV_NUMBER'] %>
+  database: simple_server_test<%= ENV['TEST_ENV_NUMBER'] %>
 
 production:
   <<: *default
