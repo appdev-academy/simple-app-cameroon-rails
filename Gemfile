@@ -11,6 +11,7 @@ gem "dotenv-rails"
 
 gem "active_record_union"
 gem "activerecord-import"
+gem "airbrake"
 gem "amazing_print"
 gem "auto_strip_attributes"
 gem "bcrypt", "~> 3.1", ">= 3.1.11"
@@ -70,6 +71,7 @@ gem "scenic"
 gem "sentry-raven"
 gem "sidekiq", '5.2.9'
 gem "sidekiq-throttled"
+gem "sidekiq-statsd"
 gem "slack-notifier"
 gem "timecop", "~> 0.9.0", require: false
 gem "twilio-ruby", "~> 5.10", ">= 5.10.3"

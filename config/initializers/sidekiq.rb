@@ -1,3 +1,5 @@
+require 'sidekiq-statsd'
+
 class SetLocalTimezone
   def call(_worker, _job, _queue)
     Time.use_zone(Rails.application.config.country[:time_zone] || "UTC") { yield }

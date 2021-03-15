@@ -41,7 +41,8 @@ class CountryConfig
     US: {
       abbreviation: "US",
       name: "United States",
-      extended_region_reports: true,
+      extended_region_reports: false,
+      states: COUNTRYWISE_STATES["US"],
       dashboard_locale: "en",
       faker_locale: "en-IND",
       time_zone: "America/New_York",
@@ -63,6 +64,8 @@ class CountryConfig
     CM: {
       abbreviation: "CM",
       name: "Republic of Cameroon",
+      extended_region_reports: false,
+      states: COUNTRYWISE_STATES["Cameroon"],
       dashboard_locale: "en",
       faker_locale: "en-IND",
       time_zone: "Africa/Algiers",
